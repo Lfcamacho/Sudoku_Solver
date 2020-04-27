@@ -1,10 +1,6 @@
-# Function to see if cell is free
-def free(board,row,col):
-
-    return True if board[row][col] == 0 else False
 
 # Function to check if the number is valid according to sudoku rules
-def verify(board,row,col):
+def is_valid(board,row,col):
 
     # Loop that will allow to check if there is a number repeated in row or column
     for num in range(0,9):
@@ -24,6 +20,14 @@ def verify(board,row,col):
                 return False
     return True
 
+def find_empty(board):
+
+    for i,val in enumerate(board):
+        for j,value in enumerate(val):
+            if value == 0:
+                return (i,j)
+    return False
+
 # Function to print the sudoku board
 def printboard(board):
 
@@ -32,48 +36,30 @@ def printboard(board):
     print('\n')
 
 # Main function that is called himself to solve sudoku recursively using backtracking
-def solver(board,row,col):
+def solver(board):
 
-    global finish # used to finish the program once it finds a solution
-    finish = False
-
-    if free(board,row,col):
-
-        # Loop that chooses which number should it try next
-        for num in range(1,10):
-
+    pos = find_empty(board)
+    if pos:
+        row,col = pos
+        for num in range(1,10):        # Loop that chooses which number should it try next
             board[row][col] = num
 
-            if verify(board,row,col):
-
-                # This if's wil tell which is the next cell in the process
-                if col == 8 and row < 8:
-                    solver(board,row+1,0)
-
-                if col < 8:
-                    solver(board,row,col+1)
-
-                if row == 8 and col == 8:
-                    finish = True
-                    printboard(board)
-
-            if finish: break
+            if is_valid(board,row,col):
+                board = solver(board)
+                if not find_empty(board):
+                    break
 
             board[row][col] = 0
-
+        return board
+        
     else:
+        return board
 
-        if col == 8 and row < 8:
-            solver(board, row + 1, 0)
 
-        if col < 8:
-            solver(board, row, col + 1)
 
-        if row == 8 and col == 8:
-            finish = True
-            printboard(board)
 
-"""
+
+'''
 board = [
     [0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0],
@@ -85,7 +71,7 @@ board = [
     [0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0]
 ]
-"""
+'''
 
 board = [
     [0,3,0,0,0,0,0,0,0],
@@ -98,9 +84,9 @@ board = [
     [0,0,0,4,0,0,0,0,5],
     [0,0,0,0,8,0,0,7,0]
 ]
-"""
-row = 0
-col = 0
+
 
 printboard(board)
-solver(board,row,col)
+printboard(solver(board))
+
+
