@@ -35,7 +35,7 @@ def printboard(board):
         print(x)
     print('\n')
 
-# Main function that is called himself to solve sudoku recursively using backtracking
+# Main function that is called recursively to solve sudoku using backtracking
 def solver(board):
 
     pos = find_empty(board)
