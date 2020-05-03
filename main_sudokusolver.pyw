@@ -1,90 +1,203 @@
 import pygame
 import time, random, textwrap, copy
-#import solver
+import solver
 pygame.font.init()
 
 
 # Initializing all variables that are not changing in the game, like size, color and caption
-WIDTH, HEIGHT = 405, 500
+WIDTH, HEIGHT = 398, 500
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Tic Tac Toe")
+
+# Colors
 WHITE = (255,255,255)
-BLUE = (0,0,70)
+BLUE = (0,0,100)
 BLACK = (0,0,0)
-GRAY = (220,220,220)
-WIN.fill(WHITE)
+GRAY = (200,200,200)
+RED = (255,0,0)
+
+# Fonts
+NUMBER_FONT = pygame.font.SysFont("comicsans", 35)
+
 
 
 class Sudoku():
 
     def __init__(self):
-
         self.x_space = 0
         self.y_space = 50
-        self.cube_size = round((WIDTH - 2 * self.x_space) / 9)
-        self.board = []
-        self.create_board()
+        self.cube_size = int((WIDTH - 2 * self.x_space) / 9)
+        self.board = [[0 for i in range(0,9)] for j in range(0,9)]
+        self.cubeboard = []
+        self.create_cubes()
+        self.draw_board()
         
-    def create_board(self):
-        row = []
+    def create_cubes(self):
         x = self.x_space
         y = self.y_space
-        color = BLUE
+        row = []
 
         for i in range(0,9):
-            for j in range (0,9):
-
+            for j in range(0,9):
                 cube = Cube(0, x, y, self.cube_size)
                 row.append(cube)
-                thick = 3
-
-                if j % 3 == 0 and j != 0 and i == 8:
-                    pygame.draw.line(WIN, color, (x, self.y_space), (x, (self.y_space + self.cube_size * 9) - 1), thick)
-                
-                x += self.cube_size
-
-            if i % 3 == 0 and i != 0:
-                pygame.draw.line(WIN, color, (self.x_space, y), ((self.x_space + self.cube_size * 9) - 1, y), thick)
-
-            x= self.x_space
-            y += self.cube_size
-            self.board.append(row)
+                x += self.cube_size      
+            self.cubeboard.append(row)
             row = []
+            x = self.x_space
+            y += self.cube_size                
+    
+    def draw_board(self):
+        x = self.x_space
+        y = self.y_space
 
-        pygame.draw.rect(WIN, color, (self.x_space, self.y_space, self.cube_size * 9, self.cube_size * 9), thick)
+        self.draw_cubes()
 
+        for i in range(0,10):
+            if i % 3 == 0:
+                thick = 4
+            else:
+                thick = 1
+            pygame.draw.line(WIN, BLACK, (self.x_space, y), ((self.x_space + self.cube_size * 9), y), thick)
+            pygame.draw.line(WIN, BLACK, (x, self.y_space), (x, (self.y_space + self.cube_size * 9)), thick)
+            x += self.cube_size
+            y += self.cube_size
+
+
+    def draw_cubes(self):
+        for i in range(0,9):
+            for j in range(0,9):
+                if self.cubeboard[i][j].selected == True:
+                    self.cubeboard[i][j].draw_selection()
+                if not solver.is_valid(self.board, i, j) and self.board[i][j] != 0:
+                    self.cubeboard[i][j].draw_invalid()
+                    self.cubeboard[i][j].valid = False
+                else:
+                    self.cubeboard[i][j].valid = True
+                self.cubeboard[i][j].draw_number()        
+
+    def update(self, row, col, num):
+        for i in range(0,9):
+            for j in range(0,9):
+                if i == row and j == col:
+                    self.cubeboard[i][j].selected = True
+                else:
+                    self.cubeboard[i][j].selected = False
+
+        if num != None:
+            self.cubeboard[row][col].value = num
+            self.board[row][col] = num
+
+    def get_boardposition(self, pos):
+        col = (pos[0] - self.x_space) // self.cube_size
+        row = (pos[1] - self.y_space) // self.cube_size
+        return row, col
+
+    def validate(self):
+        for i in range(0,9):
+            for j in range(0,9):
+                if self.cubeboard[i][j].valid == False:
+                    return False
+        return True
+
+    def solve(self):
+        if self.validate():       
+            solver.solver(self.board)
+            for i in range(0,9):
+                for j in range(0,9):
+                    self.cubeboard[i][j].value = self.board[i][j]
 
 
 
 
 class Cube():
 
-    def __init__(self, x, y, size):
-        
+    def __init__(self, value, x, y, size): 
         self.x = x
         self.y = y
         self.size = size
-        pygame.draw.rect(WIN, GRAY, (self.x, self.y, self.size, self.size), 1)
+        self.value = value
+        self.selected = False
+        self.valid = True
+    
+    def draw_selection(self):
+        s = pygame.Surface((self.size,self.size)) 
+        s.set_alpha(70)               
+        s.fill((BLACK))          
+        WIN.blit(s, (self.x, self.y))
 
+    def draw_number(self):
+        if self.value != 0:
+            number = NUMBER_FONT.render(str(self.value), 1, BLACK)
+            WIN.blit(number, (int(self.x + (self.size - number.get_width()) / 2), int(self.y + (self.size - number.get_height()) / 2 )))
 
+    def draw_invalid(self):
+        s = pygame.Surface((self.size,self.size)) 
+        s.set_alpha(100)               
+        s.fill((RED))          
+        WIN.blit(s, (self.x, self.y))
 
 
 def main():
-
-    WIN.fill((255,255,255))
+    WIN.fill((WHITE))
     run = True
-    FPS = 60
     clock = pygame.time.Clock()
     sudoku = Sudoku()
+    row = None
+    col = None
+    num = None
+
+    def redraw_window():
+        WIN.fill(WHITE)
+        sudoku.draw_board()
 
     while run:
-        clock.tick(FPS)
-        pygame.display.update()
-
-
+        
         for event in pygame.event.get():
-
             if event.type == pygame.QUIT:
                 quit()
+            if event.type == pygame.MOUSEBUTTONDOWN:    # when clicked with mouse
+                row,col = sudoku.get_boardposition(event.pos)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    if col > 0:
+                        col -= 1
+                if event.key == pygame.K_RIGHT:
+                    if col < 8:
+                        col += 1
+                if event.key == pygame.K_UP:
+                    if row > 0:
+                        row -= 1
+                if event.key == pygame.K_DOWN:
+                    if row < 8:
+                        row += 1
+                if event.key == pygame.K_1 or event.key == pygame.K_KP1:
+                    num = 1
+                if event.key == pygame.K_2 or event.key == pygame.K_KP2:
+                    num = 2
+                if event.key == pygame.K_3 or event.key == pygame.K_KP3:
+                    num = 3
+                if event.key == pygame.K_4 or event.key == pygame.K_KP4:
+                    num = 4
+                if event.key == pygame.K_5 or event.key == pygame.K_KP5:
+                    num = 5
+                if event.key == pygame.K_6 or event.key == pygame.K_KP6:
+                    num = 6
+                if event.key == pygame.K_7 or event.key == pygame.K_KP7:
+                    num = 7
+                if event.key == pygame.K_8 or event.key == pygame.K_KP8:
+                    num = 8
+                if event.key == pygame.K_9 or event.key == pygame.K_KP9:
+                    num = 9
+                if event.key == pygame.K_DELETE or event.key == pygame.K_BACKSPACE:
+                    num = 0
+                if event.key == pygame.K_SPACE:
+                    sudoku.solve()
+                    
 
+            sudoku.update(row,col,num)
+            num = None
+                
+        redraw_window()
+        pygame.display.update()
 main()
