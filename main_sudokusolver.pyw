@@ -20,6 +20,8 @@ GREEN = (0,255,0)
 
 # Fonts
 NUMBER_FONT = pygame.font.SysFont("comicsans", 35)
+TITLE_FONT = pygame.font.SysFont("comicsans", 50)
+BUTTON_FONT = pygame.font.SysFont("comicsans", 20)
 
 
 
@@ -27,13 +29,13 @@ class Sudoku():
 
     def __init__(self):
         self.x_space = 0
-        self.y_space = 50
+        self.y_space = 60
         self.cube_size = int((WIDTH - 2 * self.x_space) / 9)
         self.board = [[0 for i in range(9)] for j in range(9)]
         self.cubes = []
         self.q = queue.Queue()
         self.create_cubes()
-        self.draw_board()
+
         
     def create_cubes(self):
         x = self.x_space
@@ -67,8 +69,9 @@ class Sudoku():
             y += self.cube_size
 
         for i in range(9):
-            for j in range(9): 
-                self.cubes[i][j].draw_contour()      
+            for j in range(9):
+                if self.cubes != BLACK: 
+                    self.cubes[i][j].draw_contour()      
 
     def draw_cubes(self):
         
@@ -100,6 +103,11 @@ class Sudoku():
                     self.cubes[i][j].contour = BLACK
                 else:
                     self.cubes[i][j].selected = False
+
+    def valid_position(self, pos):
+        if pos[0] > self.x_space and pos[0] < self.x_space + 9 * self.cube_size and pos[1] > self.y_space and pos[1] < self.y_space + 9 * self.cube_size:
+            return True
+        return False
 
     def get_boardposition(self, pos):
         col = (pos[0] - self.x_space) // self.cube_size
@@ -190,26 +198,78 @@ class Cube():
             pygame.draw.rect(WIN, self.contour, (self.x, self.y, self.size, self.size), 4)
 
 
+class button():
+    def __init__(self, x, y, width, height, color, text):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.color = color
+        self.text = text
+        self.draw_button()
+
+    def draw_button(self):
+        pygame.draw.rect(WIN, (0,0,0), (self.x - 2, self.y - 2, self.width + 4, self.height + 4))
+        pygame.draw.rect(WIN, self.color, (self.x, self.y, self.width, self.height))
+        self.draw_text()
+    
+    def draw_text(self):
+        label = BUTTON_FONT.render(self.text, 1, (0,0,0))
+        WIN.blit(label, (round(self.x + (self.width - label.get_width()) / 2), round(self.y + (self.height - label.get_height()) / 2 )))
+
+    def isOver(self, pos):
+        if pos[0] > self.x and pos[0] < self.x + self.width:
+            if pos[1] > self.y and pos[1] < self.y + self.height:
+                return True
+
+
 
 def main():
-    WIN.fill((WHITE))
     run = True
     clock = pygame.time.Clock()
     sudoku = Sudoku()
-    row = None
-    col = None
+    row = 4
+    col = 4
     num = None
 
+    WIN.fill(WHITE)
+    fastsolve = button(0, HEIGHT - 30, WIDTH // 3, 30, WHITE, "Fast solve")
+    visualsolve = button(WIDTH // 3, HEIGHT - 30, WIDTH // 3, 30, WHITE, "Visual solve")
+
     def redraw_window():
+        WIN.fill(WHITE)
+        title = NUMBER_FONT.render("SUDOKU SOLVER", 1, BLACK)
+        WIN.blit(title, ((WIDTH - title.get_width()) / 2,20))
+        fastsolve.draw_button()
+        visualsolve.draw_button()
         sudoku.draw_board()
 
     while run:
+
+        redraw_window()
+        pygame.display.update()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 quit()
             if event.type == pygame.MOUSEBUTTONDOWN:    # when clicked with mouse
-                row,col = sudoku.get_boardposition(event.pos)
+                if sudoku.valid_position(event.pos):
+                    row,col = sudoku.get_boardposition(event.pos)
+                if fastsolve.isOver(event.pos):
+                    sudoku.solve(False)
+                if visualsolve.isOver(event.pos):
+                    sudoku.solve(True)
+
+            if event.type == pygame.MOUSEMOTION:
+                if fastsolve.isOver(event.pos):
+                    fastsolve.color = GRAY
+                else:
+                    fastsolve.color = WHITE
+                if visualsolve.isOver(event.pos):
+                    visualsolve.color = GRAY
+                else:
+                    visualsolve.color = WHITE
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
                     if col > 0:
@@ -223,6 +283,7 @@ def main():
                 if event.key == pygame.K_DOWN:
                     if row < 8:
                         row += 1
+
                 if event.key == pygame.K_1 or event.key == pygame.K_KP1:
                     num = 1
                 if event.key == pygame.K_2 or event.key == pygame.K_KP2:
@@ -243,6 +304,9 @@ def main():
                     num = 9
                 if event.key == pygame.K_DELETE or event.key == pygame.K_BACKSPACE:
                     num = 0
+
+
+
                 if event.key == pygame.K_SPACE:
                     sudoku.solve(False)
                     sudoku.q.queue.clear()
@@ -255,7 +319,6 @@ def main():
         if not sudoku.q.empty(): 
             sudoku.update_visual(sudoku.q.get())
             
-        redraw_window()
 
-        pygame.display.update()
+
 main()
