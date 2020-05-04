@@ -15,6 +15,7 @@ BLUE = (0,0,100)
 BLACK = (0,0,0)
 GRAY = (200,200,200)
 RED = (255,0,0)
+GREEN = (0,255,0)
 
 # Fonts
 NUMBER_FONT = pygame.font.SysFont("comicsans", 35)
@@ -100,14 +101,53 @@ class Sudoku():
                     return False
         return True
 
-    def solve(self):
-        if self.validate():       
-            solver.solver(self.board)
-            for i in range(0,9):
-                for j in range(0,9):
-                    self.cubeboard[i][j].value = self.board[i][j]
+    def solve(self, visualize):
+        if self.validate():
+            if visualize:
+                self.setupboard()
+                self.visual_solve(self.board)
+            else:    
+                solver.solver(self.board)
+                for i in range(0,9):
+                    for j in range(0,9):
+                        self.cubeboard[i][j].value = self.board[i][j]
 
+    def setupboard(self):
+        for i in range(0,9):
+            for j in range(0,9):
+                if self.cubeboard[i][j].value != 0:
+                    self.cubeboard[i][j].draw_contour(GREEN)
 
+    def update_visual(self, cube, color):
+        cube.draw_cube()
+        if color == RED:
+            cube.value = 0
+        cube.draw_number()
+        cube.draw_contour(color)
+        pygame.display.update()
+        pygame.time.delay(50)
+
+    
+    def visual_solve(self, board):
+        
+        pos = solver.find_empty(board)
+        if pos:
+            row,col = pos
+            for num in range(1,10):       
+                board[row][col] = num
+                self.cubeboard[row][col].value = num
+
+                if solver.is_valid(board,row,col):
+                    self.update_visual(self.cubeboard[row][col], GREEN)
+                    board = self.visual_solve(board)
+                    if not solver.find_empty(board):
+                        break
+                    self.update_visual(self.cubeboard[row][col], RED)
+                board[row][col] = 0
+            return board
+            
+        else:
+            return board
 
 
 class Cube():
@@ -119,6 +159,9 @@ class Cube():
         self.value = value
         self.selected = False
         self.valid = True
+
+    def draw_cube(self):
+        pygame.draw.rect(WIN, WHITE, (self.x, self.y, self.size, self.size))
     
     def draw_selection(self):
         s = pygame.Surface((self.size,self.size)) 
@@ -129,13 +172,17 @@ class Cube():
     def draw_number(self):
         if self.value != 0:
             number = NUMBER_FONT.render(str(self.value), 1, BLACK)
-            WIN.blit(number, (int(self.x + (self.size - number.get_width()) / 2), int(self.y + (self.size - number.get_height()) / 2 )))
+            WIN.blit(number, (round(self.x + (self.size - number.get_width()) / 2), round(self.y + (self.size - number.get_height()) / 2 )))
 
     def draw_invalid(self):
         s = pygame.Surface((self.size,self.size)) 
         s.set_alpha(100)               
         s.fill((RED))          
         WIN.blit(s, (self.x, self.y))
+
+    def draw_contour(self, color):
+        pygame.draw.rect(WIN, color, (self.x, self.y, self.size, self.size), 4)
+
 
 
 def main():
@@ -192,8 +239,9 @@ def main():
                 if event.key == pygame.K_DELETE or event.key == pygame.K_BACKSPACE:
                     num = 0
                 if event.key == pygame.K_SPACE:
-                    sudoku.solve()
-                    
+                    sudoku.solve(False)
+                if event.key == pygame.K_a:
+                    sudoku.solve(True)
 
             sudoku.update(row,col,num)
             num = None
