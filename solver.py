@@ -3,7 +3,7 @@
 def is_valid(board,row,col):
 
     # Loop that will allow to check if there is a number repeated in row or column
-    for num in range(0,9):
+    for num in range(9):
 
         if board[row][num] == board[row][col] and num != col:
             return False

@@ -1,4 +1,5 @@
 import pygame
+import queue
 import time, random, textwrap, copy
 import solver
 pygame.font.init()
@@ -28,8 +29,9 @@ class Sudoku():
         self.x_space = 0
         self.y_space = 50
         self.cube_size = int((WIDTH - 2 * self.x_space) / 9)
-        self.board = [[0 for i in range(0,9)] for j in range(0,9)]
-        self.cubeboard = []
+        self.board = [[0 for i in range(9)] for j in range(9)]
+        self.cubes = []
+        self.q = queue.Queue()
         self.create_cubes()
         self.draw_board()
         
@@ -38,12 +40,12 @@ class Sudoku():
         y = self.y_space
         row = []
 
-        for i in range(0,9):
-            for j in range(0,9):
+        for i in range(9):
+            for j in range(9):
                 cube = Cube(0, x, y, self.cube_size)
                 row.append(cube)
                 x += self.cube_size      
-            self.cubeboard.append(row)
+            self.cubes.append(row)
             row = []
             x = self.x_space
             y += self.cube_size                
@@ -64,30 +66,40 @@ class Sudoku():
             x += self.cube_size
             y += self.cube_size
 
+        for i in range(9):
+            for j in range(9): 
+                self.cubes[i][j].draw_contour()      
 
     def draw_cubes(self):
-        for i in range(0,9):
-            for j in range(0,9):
-                if self.cubeboard[i][j].selected == True:
-                    self.cubeboard[i][j].draw_selection()
-                if not solver.is_valid(self.board, i, j) and self.board[i][j] != 0:
-                    self.cubeboard[i][j].draw_invalid()
-                    self.cubeboard[i][j].valid = False
-                else:
-                    self.cubeboard[i][j].valid = True
-                self.cubeboard[i][j].draw_number()        
+        
+        for i in range(9):
+            for j in range(9):
+                self.cubes[i][j].draw_cube()
+                if self.cubes[i][j].selected:
+                    self.cubes[i][j].draw_selection()
+                if not self.cubes[i][j].valid:
+                    self.cubes[i][j].draw_invalid()
+                self.cubes[i][j].draw_number()
 
-    def update(self, row, col, num):
-        for i in range(0,9):
-            for j in range(0,9):
-                if i == row and j == col:
-                    self.cubeboard[i][j].selected = True
-                else:
-                    self.cubeboard[i][j].selected = False
-
+    def update_cube(self, row, col, num):
         if num != None:
-            self.cubeboard[row][col].value = num
+            self.cubes[row][col].value = num
             self.board[row][col] = num
+
+        for i in range(9):
+            for j in range(9):
+                if i == row and j == col:
+                    self.cubes[i][j].selected = True
+                else:
+                    self.cubes[i][j].selected = False
+                if solver.is_valid(self.board, i, j) or self.board[i][j] == 0:
+                    self.cubes[i][j].valid = True
+                else:
+                    self.cubes[i][j].valid = False
+                if self.q.empty():
+                    self.cubes[i][j].contour = BLACK
+                else:
+                    self.cubes[i][j].selected = False
 
     def get_boardposition(self, pos):
         col = (pos[0] - self.x_space) // self.cube_size
@@ -95,35 +107,28 @@ class Sudoku():
         return row, col
 
     def validate(self):
-        for i in range(0,9):
-            for j in range(0,9):
-                if self.cubeboard[i][j].valid == False:
+        for i in range(9):
+            for j in range(9):
+                if self.cubes[i][j].valid == False:
                     return False
         return True
 
     def solve(self, visualize):
         if self.validate():
             if visualize:
-                self.setupboard()
                 self.visual_solve(self.board)
             else:    
                 solver.solver(self.board)
-                for i in range(0,9):
-                    for j in range(0,9):
-                        self.cubeboard[i][j].value = self.board[i][j]
+                for i in range(9):
+                    for j in range(9):
+                        self.cubes[i][j].value = self.board[i][j]
 
-    def setupboard(self):
-        for i in range(0,9):
-            for j in range(0,9):
-                if self.cubeboard[i][j].value != 0:
-                    self.cubeboard[i][j].draw_contour(GREEN)
-
-    def update_visual(self, cube, color):
+    def update_visual(self, change):
+        cube = change[0]
+        cube.contour = change[2]
         cube.draw_cube()
-        if color == RED:
-            cube.value = 0
+        cube.value = change[1]
         cube.draw_number()
-        cube.draw_contour(color)
         pygame.display.update()
         pygame.time.delay(50)
 
@@ -135,14 +140,13 @@ class Sudoku():
             row,col = pos
             for num in range(1,10):       
                 board[row][col] = num
-                self.cubeboard[row][col].value = num
 
                 if solver.is_valid(board,row,col):
-                    self.update_visual(self.cubeboard[row][col], GREEN)
+                    self.q.put((self.cubes[row][col], num, GREEN))
                     board = self.visual_solve(board)
                     if not solver.find_empty(board):
                         break
-                    self.update_visual(self.cubeboard[row][col], RED)
+                    self.q.put((self.cubes[row][col], 0, RED))
                 board[row][col] = 0
             return board
             
@@ -157,6 +161,7 @@ class Cube():
         self.y = y
         self.size = size
         self.value = value
+        self.contour = BLACK
         self.selected = False
         self.valid = True
 
@@ -180,8 +185,9 @@ class Cube():
         s.fill((RED))          
         WIN.blit(s, (self.x, self.y))
 
-    def draw_contour(self, color):
-        pygame.draw.rect(WIN, color, (self.x, self.y, self.size, self.size), 4)
+    def draw_contour(self):
+        if self.contour != BLACK:
+            pygame.draw.rect(WIN, self.contour, (self.x, self.y, self.size, self.size), 4)
 
 
 
@@ -195,11 +201,10 @@ def main():
     num = None
 
     def redraw_window():
-        WIN.fill(WHITE)
         sudoku.draw_board()
 
     while run:
-        
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 quit()
@@ -240,12 +245,17 @@ def main():
                     num = 0
                 if event.key == pygame.K_SPACE:
                     sudoku.solve(False)
+                    sudoku.q.queue.clear()
                 if event.key == pygame.K_a:
                     sudoku.solve(True)
 
-            sudoku.update(row,col,num)
+            sudoku.update_cube(row,col,num)
             num = None
-                
+            
+        if not sudoku.q.empty(): 
+            sudoku.update_visual(sudoku.q.get())
+            
         redraw_window()
+
         pygame.display.update()
 main()
