@@ -11,12 +11,12 @@ WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Tic Tac Toe")
 
 # Colors
-WHITE = (255,255,255)
-BLUE = (0,0,100)
-BLACK = (0,0,0)
-GRAY = (200,200,200)
-RED = (255,0,0)
-GREEN = (0,255,0)
+WHITE = [255,255,255]
+BLUE = [0,0,100]
+BLACK =[0,0,0]
+GRAY = [200,200,200]
+RED = [255,0,0]
+GREEN = [0,255,0]
 
 # Fonts
 NUMBER_FONT = pygame.font.SysFont("comicsans", 35)
@@ -161,6 +161,12 @@ class Sudoku():
         else:
             return board
 
+    def clear_board(self):
+        for i in range(9):
+            for j in range(9):
+                self.cubes[i][j].value = 0
+                self.board[i][j] = 0
+
 
 class Cube():
 
@@ -199,13 +205,16 @@ class Cube():
 
 
 class button():
-    def __init__(self, x, y, width, height, color, text):
+    def __init__(self, x, y, width, height, color="WHITE", text="", textcolor=BLACK):
         self.x = x
         self.y = y
         self.width = width
         self.height = height
         self.color = color
+        self.colorcopy = color
         self.text = text
+        self.textcolor = textcolor
+        self.flag = True
         self.draw_button()
 
     def draw_button(self):
@@ -220,8 +229,22 @@ class button():
     def isOver(self, pos):
         if pos[0] > self.x and pos[0] < self.x + self.width:
             if pos[1] > self.y and pos[1] < self.y + self.height:
+                if self.flag:
+                    self.change_color()
+                    self.flag = False
                 return True
+        self.color = self.colorcopy
+        self.flag = True
 
+    def change_color(self):
+        color = []
+        for x in self.color:
+            if x > 255//2:
+                x -= 60
+            else:
+                x += 60
+            color.append(x)
+        self.color = color
 
 
 def main():
@@ -235,6 +258,8 @@ def main():
     WIN.fill(WHITE)
     fastsolve = button(0, HEIGHT - 30, WIDTH // 3, 30, WHITE, "Fast solve")
     visualsolve = button(WIDTH // 3, HEIGHT - 30, WIDTH // 3, 30, WHITE, "Visual solve")
+    clear = button(2 * WIDTH // 3, HEIGHT - 30, WIDTH // 3, 30, WHITE, "Clear board")
+
 
     def redraw_window():
         WIN.fill(WHITE)
@@ -242,6 +267,7 @@ def main():
         WIN.blit(title, ((WIDTH - title.get_width()) / 2,20))
         fastsolve.draw_button()
         visualsolve.draw_button()
+        clear.draw_button()
         sudoku.draw_board()
 
     while run:
@@ -252,23 +278,23 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 quit()
+
             if event.type == pygame.MOUSEBUTTONDOWN:    # when clicked with mouse
                 if sudoku.valid_position(event.pos):
                     row,col = sudoku.get_boardposition(event.pos)
                 if fastsolve.isOver(event.pos):
+                    sudoku.q.queue.clear()
                     sudoku.solve(False)
                 if visualsolve.isOver(event.pos):
                     sudoku.solve(True)
+                if clear.isOver(event.pos):
+                    sudoku.q.queue.clear()
+                    sudoku.clear_board()
 
             if event.type == pygame.MOUSEMOTION:
-                if fastsolve.isOver(event.pos):
-                    fastsolve.color = GRAY
-                else:
-                    fastsolve.color = WHITE
-                if visualsolve.isOver(event.pos):
-                    visualsolve.color = GRAY
-                else:
-                    visualsolve.color = WHITE
+                fastsolve.isOver(event.pos)
+                visualsolve.isOver(event.pos)
+                clear.isOver(event.pos)
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
@@ -304,14 +330,6 @@ def main():
                     num = 9
                 if event.key == pygame.K_DELETE or event.key == pygame.K_BACKSPACE:
                     num = 0
-
-
-
-                if event.key == pygame.K_SPACE:
-                    sudoku.solve(False)
-                    sudoku.q.queue.clear()
-                if event.key == pygame.K_a:
-                    sudoku.solve(True)
 
             sudoku.update_cube(row,col,num)
             num = None
