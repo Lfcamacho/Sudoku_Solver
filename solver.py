@@ -28,13 +28,6 @@ def find_empty(board):
                 return (i,j)
     return False
 
-# Function to print the sudoku board
-def printboard(board):
-
-    for x in board:
-        print(x)
-    print('\n')
-
 # Main function that is called recursively to solve sudoku using backtracking
 def solver(board):
 
@@ -54,39 +47,4 @@ def solver(board):
         
     else:
         return board
-
-
-
-
-
-'''
-board = [
-    [0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0]
-]
-
-board = [
-    [1, 3, 7, 0, 0, 5, 0, 4, 0],
-    [5, 0, 4, 0, 0, 0, 0, 0, 3],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 2, 0, 0],
-    [0, 5, 0, 2, 0, 3, 0, 0, 0],
-    [7, 0, 0, 0, 0, 0, 0, 5, 0],
-    [0, 9, 0, 0, 0, 0, 0, 0, 0],
-    [0, 8, 0, 0, 5, 0, 0, 0, 0],
-    [0, 0, 6, 0, 0, 4, 0, 0, 1]
-]
-
-
-
-printboard(board)
-printboard(solver(board))
-'''
 

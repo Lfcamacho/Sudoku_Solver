@@ -2,8 +2,6 @@ import pygame
 import queue
 import time, random, textwrap, copy
 import solver
-pygame.font.init()
-
 
 # Initializing all variables that are not changing in the game, like size, color and caption
 WIDTH, HEIGHT = 398, 500
@@ -12,13 +10,12 @@ pygame.display.set_caption("Tic Tac Toe")
 
 # Colors
 WHITE = [255,255,255]
-BLUE = [0,0,100]
 BLACK =[0,0,0]
-GRAY = [200,200,200]
 RED = [255,0,0]
 GREEN = [0,255,0]
 
 # Fonts
+pygame.font.init()
 NUMBER_FONT = pygame.font.SysFont("comicsans", 35)
 TITLE_FONT = pygame.font.SysFont("comicsans", 50)
 BUTTON_FONT = pygame.font.SysFont("comicsans", 20)
@@ -32,26 +29,26 @@ class Sudoku():
         self.y_space = 60
         self.cube_size = int((WIDTH - 2 * self.x_space) / 9)
         self.board = [[0 for i in range(9)] for j in range(9)]
-        self.cubes = []
         self.q = queue.Queue()
         self.create_cubes()
 
-        
+    # creates a matrix with the squares of the Sudoku board, each with a given value, position and size.  
     def create_cubes(self):
+        self.cubes = []
         x = self.x_space
         y = self.y_space
-        row = []
 
         for i in range(9):
+            row = []
             for j in range(9):
                 cube = Cube(0, x, y, self.cube_size)
                 row.append(cube)
                 x += self.cube_size      
             self.cubes.append(row)
-            row = []
             x = self.x_space
             y += self.cube_size                
     
+    # Draws the visuals in the board (numbers, lines, contours and colors)
     def draw_board(self):
         x = self.x_space
         y = self.y_space
@@ -70,21 +67,23 @@ class Sudoku():
 
         for i in range(9):
             for j in range(9):
-                if self.cubes != BLACK: 
+                if self.cubes[i][j].contour != BLACK: 
                     self.cubes[i][j].draw_contour()      
 
+    # Draws the number in the square and if it is selected or invalid 
     def draw_cubes(self):
         
         for i in range(9):
             for j in range(9):
-                self.cubes[i][j].draw_cube()
                 if self.cubes[i][j].selected:
                     self.cubes[i][j].draw_selection()
                 if not self.cubes[i][j].valid:
                     self.cubes[i][j].draw_invalid()
                 self.cubes[i][j].draw_number()
 
+    # Updates information about each square (number, selection, valid number and contour)
     def update_cube(self, row, col, num):
+
         if num != None:
             self.cubes[row][col].value = num
             self.board[row][col] = num
@@ -103,23 +102,27 @@ class Sudoku():
                     self.cubes[i][j].contour = BLACK
                 else:
                     self.cubes[i][j].selected = False
-
+    
+    # Determines if the mouse is clicked inside Sudoku board 
     def valid_position(self, pos):
         if pos[0] > self.x_space and pos[0] < self.x_space + 9 * self.cube_size and pos[1] > self.y_space and pos[1] < self.y_space + 9 * self.cube_size:
             return True
         return False
 
+    # Gets the position where the mouse is clicked and returns the corresponding matrix indexes
     def get_boardposition(self, pos):
         col = (pos[0] - self.x_space) // self.cube_size
         row = (pos[1] - self.y_space) // self.cube_size
         return row, col
 
+    # Determines whether the numbers in the board are valid according to Sudoku rules 
     def validate(self):
         for i in range(9):
             for j in range(9):
                 if self.cubes[i][j].valid == False:
                     return False
         return True
+
 
     def solve(self, visualize):
         if self.validate():
@@ -131,18 +134,14 @@ class Sudoku():
                     for j in range(9):
                         self.cubes[i][j].value = self.board[i][j]
 
-    def update_visual(self, change):
+    # Updates the contour and number for each sqaure when solving visually
+    def update_visualsolve(self, change):
         cube = change[0]
         cube.contour = change[2]
-        cube.draw_cube()
         cube.value = change[1]
-        cube.draw_number()
-        pygame.display.update()
-        pygame.time.delay(50)
-
     
+    # Solves sudoku and saves each movement in a queue
     def visual_solve(self, board):
-        
         pos = solver.find_empty(board)
         if pos:
             row,col = pos
@@ -178,10 +177,8 @@ class Cube():
         self.contour = BLACK
         self.selected = False
         self.valid = True
-
-    def draw_cube(self):
-        pygame.draw.rect(WIN, WHITE, (self.x, self.y, self.size, self.size))
     
+    # Draws gray background on sqaure when selected
     def draw_selection(self):
         s = pygame.Surface((self.size,self.size)) 
         s.set_alpha(70)               
@@ -193,6 +190,7 @@ class Cube():
             number = NUMBER_FONT.render(str(self.value), 1, BLACK)
             WIN.blit(number, (round(self.x + (self.size - number.get_width()) / 2), round(self.y + (self.size - number.get_height()) / 2 )))
 
+    # Draws red background on sqaure when the number is invalid according tu sudoku rules
     def draw_invalid(self):
         s = pygame.Surface((self.size,self.size)) 
         s.set_alpha(100)               
@@ -264,7 +262,7 @@ def main():
     def redraw_window():
         WIN.fill(WHITE)
         title = NUMBER_FONT.render("SUDOKU SOLVER", 1, BLACK)
-        WIN.blit(title, ((WIDTH - title.get_width()) / 2,20))
+        WIN.blit(title, (int((WIDTH - title.get_width()) / 2),20))
         fastsolve.draw_button()
         visualsolve.draw_button()
         clear.draw_button()
@@ -279,7 +277,12 @@ def main():
             if event.type == pygame.QUIT:
                 quit()
 
-            if event.type == pygame.MOUSEBUTTONDOWN:    # when clicked with mouse
+            if event.type == pygame.MOUSEMOTION:
+                fastsolve.isOver(event.pos)
+                visualsolve.isOver(event.pos)
+                clear.isOver(event.pos)
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
                 if sudoku.valid_position(event.pos):
                     row,col = sudoku.get_boardposition(event.pos)
                 if fastsolve.isOver(event.pos):
@@ -290,11 +293,7 @@ def main():
                 if clear.isOver(event.pos):
                     sudoku.q.queue.clear()
                     sudoku.clear_board()
-
-            if event.type == pygame.MOUSEMOTION:
-                fastsolve.isOver(event.pos)
-                visualsolve.isOver(event.pos)
-                clear.isOver(event.pos)
+                sudoku.update_cube(row,col,num)
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
@@ -331,12 +330,14 @@ def main():
                 if event.key == pygame.K_DELETE or event.key == pygame.K_BACKSPACE:
                     num = 0
 
-            sudoku.update_cube(row,col,num)
-            num = None
+                sudoku.update_cube(row,col,num)
+        num = None
             
         if not sudoku.q.empty(): 
-            sudoku.update_visual(sudoku.q.get())
-            
+            sudoku.update_visualsolve(sudoku.q.get())
+            sudoku.update_cube(row,col,num)
+            pygame.time.delay(50)
 
+            
 
 main()
